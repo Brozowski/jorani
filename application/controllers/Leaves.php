@@ -539,10 +539,10 @@ class Leaves extends CI_Controller {
      */
     private function sendGenericMail($leave, $user, $manager, $lang_mail, $title, $detailledSubject, $emailModel) {
 
-        $date = new DateTime($leave['startdate']);
-        $startdate = $date->format($lang_mail->line('global_date_format'));
-        $date = new DateTime($leave['enddate']);
-        $enddate = $date->format($lang_mail->line('global_date_format'));
+        $dateStart = new DateTime($leave['startdate']);
+        $startdate = $dateStart->format($lang_mail->line('global_date_format'));
+        $dateEnd = new DateTime($leave['enddate']);
+        $enddate = $dateEnd->format($lang_mail->line('global_date_format'));
 
         $comments=$leave['comments'];
         $comment = '';
@@ -584,7 +584,13 @@ class Leaves extends CI_Controller {
             $cc = $delegates;
         }
 
-        sendMailByWrapper($this, $subject, $message, $to, $cc);
+        if (in_array($emailModel, array("cancel", "cancel_accepted", "cancel_rejected", "cancelled"))) {
+            sendMailWithCal($this, $subject, $message, $to, $dateStart->getTimestamp(), $dateEnd->getTimestamp(), $data["Type"], $leave['cause'], $user, "CANCEL");
+        } else if (in_array($emailModel, array("request", "request_accepted", "request_rejected"))) {
+            sendMailWithCal($this, $subject, $message, $to, $dateStart->getTimestamp(), $dateEnd->getTimestamp(), $data["Type"], $leave['cause'], $user, "PUBLISH");
+        } else {
+            sendMailByWrapper($this, $subject, $message, $to, $cc);
+        }
     }
 
     /**

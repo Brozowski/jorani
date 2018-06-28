@@ -129,6 +129,71 @@ function sendMailByWrapper(CI_Controller $controller, $subject, $message, $to, $
     $controller->email->send();
 }
 
+
+/**
+ * @param $subject
+ * @param $htmlMessage
+ * @param $to
+ * @param $startTime
+ * @param $endTime
+ * @param $type
+ * @param $cause
+ * @param $employee
+ * @param $method CANCEL|REQUEST|PUBLISH
+ */
+function sendMailWithCal(CI_Controller $controller, $subject, $htmlMessage, $to, $startTime, $endTime, $type, $cause, $employee, $method)
+{
+    //Convert MYSQL datetime and construct iCal start, end and issue dates
+    $dtstart= date("Ymd", $startTime);
+    $dtend= date("Ymd", $endTime);
+    $todaystamp = date("Ymd");
+
+    //Create unique identifier
+    $cal_uid = date('Ymd', $startTime).'T'.date('His', $startTime)."-".$employee['email'];
+
+    //Create Mime Boundry
+    $mime_boundary = "----Meeting Booking----".MD5(TIME());
+
+    //Create Email Headers
+    $headers = "From: ".$controller->config->item('from_name').'<'.$controller->config->item('from_mail').'>'."\n";
+
+    $headers .= "MIME-Version: 1.0\n";
+    $headers .= "Content-Type: multipart/alternative; boundary=\"$mime_boundary\"\n";
+    $headers .= "Content-class: urn:content-classes:calendarmessage\n";
+
+    //Create Email Body (HTML)
+    $message = "--$mime_boundary\n";
+    $message .= "Content-Type: text/html; charset=UTF-8\n";
+    $message .= "Content-Transfer-Encoding: 8bit\n\n";
+    $message .= $htmlMessage;
+    $message .= "--$mime_boundary\n";
+
+    //Create ICAL Content (Google rfc 2445 for details and examples of usage)
+    $ical =    'BEGIN:VCALENDAR
+PRODID:-//Jordani
+VERSION:2.0
+METHOD:'.$method.'
+BEGIN:VEVENT
+ORGANIZER:CN="'.$employee['firstname'].' '.$employee['lastname'].'":MAILTO:'.$employee['email'].'
+DTSTART:'.$dtstart.'
+DTEND:'.$dtend.'
+TRANSP:OPAQUE
+SEQUENCE:0
+UID:'.$cal_uid.'
+DTSTAMP:'.$todaystamp.'
+DESCRIPTION:'.$cause.'
+SUMMARY:'.$type.' '.$employee['firstname'].' '.$employee['lastname'].'
+CLASS:PRIVATE
+END:VEVENT
+END:VCALENDAR';
+    $message .= 'Content-Type: text/calendar;method=' . $method . '\n';
+    $message .= "Content-Transfer-Encoding: 8bit\n\n";
+    $message .= $ical;
+
+    //SEND MAIL
+    @mail($to, $subject, $message, $headers);
+}
+
 /**
  * Finalize the export to a spreadsheet. Called from an export view.
  * @param $spreadsheet reference to the spreadsheet to be exported

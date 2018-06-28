@@ -17,3 +17,6 @@ application/temp/*
 /.sonar/
 
 /vendor/
+
+.idea
+.directory
